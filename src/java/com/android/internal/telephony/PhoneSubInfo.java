@@ -17,6 +17,8 @@ package com.android.internal.telephony;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -30,6 +32,7 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
     static final String LOG_TAG = "PhoneSubInfo";
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
+    private static final boolean PFF_DBG = true;
 
     private Phone mPhone;
     private Context mContext;
@@ -64,8 +67,16 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getDeviceId() {
-        mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
-        return mPhone.getDeviceId();
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            return mPhone.getDeviceId();
+        case PackageManager.PERMISSION_SPOOFED:
+            if (PFF_DBG) log("VM: PhoneSubInfo.getDeviceId: spoofed");
+            return createNumericSpoof(mPhone.getDeviceId().length(), 6, 3, null);
+        default:
+            return "";
+        }
     }
 
     /**
@@ -74,8 +85,16 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getDeviceSvn() {
-        mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
-        return mPhone.getDeviceSvn();
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            return mPhone.getDeviceSvn();
+        case PackageManager.PERMISSION_SPOOFED:
+            if (PFF_DBG) log("VM: PhoneSubInfo.getDeviceSvn: spoofed");
+            return createNumericSpoof(mPhone.getDeviceSvn().length(), 5, 2, null);
+        default:
+            return "";
+        }
     }
 
     /**
@@ -83,8 +102,16 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getSubscriberId() {
-        mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
-        return mPhone.getSubscriberId();
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            return mPhone.getSubscriberId();
+        case PackageManager.PERMISSION_SPOOFED:
+            if (PFF_DBG) log("VM: PhoneSubInfo.getSubscriberId: spoofed");
+            return createNumericSpoof(mPhone.getSubscriberId().length(), 0, 3, null);
+        default:
+            return "";
+        }
     }
 
     /**
@@ -100,8 +127,17 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getIccSerialNumber() {
-        mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
-        return mPhone.getIccSerialNumber();
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            return mPhone.getIccSerialNumber();
+        case PackageManager.PERMISSION_SPOOFED:
+            String real = mPhone.getIccSerialNumber();
+            if (PFF_DBG) log("VM: PhoneSubInfo.getIccSerialNumber: spoofed");
+            return createNumericSpoof(real.length(), 2, 5, null);
+        default:
+            return "";
+        }
     }
 
     /**
@@ -109,8 +145,22 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getLine1Number() {
-        mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
-        return mPhone.getLine1Number();
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            return mPhone.getLine1Number();
+        case PackageManager.PERMISSION_SPOOFED:
+            byte[] data = getMD5Sum();
+            StringBuilder spoof = new StringBuilder("+11");
+            for(int i = 0; i < 4; i++) {
+                spoof.append(0x0f & data[i+4]);
+                spoof.append(data[i] >> 8);
+            }
+        	if (PFF_DBG) log("VM: PhoneSubInfo.getLine1Number: spoofed");
+            return spoof.toString();
+         default:
+            return "";
+        }
     }
 
     /**
@@ -118,8 +168,16 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getLine1AlphaTag() {
-        mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
-        return mPhone.getLine1AlphaTag();
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            return (String) mPhone.getLine1AlphaTag();
+        case PackageManager.PERMISSION_SPOOFED:
+            if (PFF_DBG) log("VM: PhoneSubInfo.getLine1AlphaTag: spoofed");
+            return "Line1";
+        default:
+            return "";
+        }
     }
 
     /**
@@ -127,8 +185,23 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getMsisdn() {
-        mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
-        return mPhone.getMsisdn();
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+            return mPhone.getMsisdn();
+        case PackageManager.PERMISSION_SPOOFED:
+            byte[] data = getMD5Sum();
+            StringBuilder spoof = new StringBuilder("+11");
+            for(int i = 0; i < 4; i++) {
+                spoof.append(0x0f & data[i+4]);
+                spoof.append(data[i] >> 8);
+            }
+            if (PFF_DBG) log("VM: PhoneSubInfo.getMsisdn: spoofed");
+            return spoof.toString();
+        default:
+            return "";
+        }
     }
 
     /**
@@ -136,10 +209,25 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getVoiceMailNumber() {
-        mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
-        String number = PhoneNumberUtils.extractNetworkPortion(mPhone.getVoiceMailNumber());
-        if (VDBG) log("VM: PhoneSubInfo.getVoiceMailNUmber: " + number);
-        return number;
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+            String number = PhoneNumberUtils.extractNetworkPortion(mPhone.getVoiceMailNumber());
+	    if (VDBG) log("VM: PhoneSubInfo.getVoiceMailNUmber: " + number);
+            return number;
+        case PackageManager.PERMISSION_SPOOFED:
+            byte[] data = getMD5Sum();
+            StringBuilder spoof = new StringBuilder("+11");
+            for(int i = 0; i < 4; i++) {
+                spoof.append(0x0f & data[i]);
+                spoof.append(data[i] >> 8);
+            }
+            if (PFF_DBG) log("VM: PhoneSubInfo.getVoiceMailNumber: spoofed");
+            return spoof.toString();
+        default:
+            return "";
+        }        
     }
 
     /**
@@ -149,11 +237,25 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getCompleteVoiceMailNumber() {
-        mContext.enforceCallingOrSelfPermission(CALL_PRIVILEGED,
-                "Requires CALL_PRIVILEGED");
-        String number = mPhone.getVoiceMailNumber();
-        if (VDBG) log("VM: PhoneSubInfo.getCompleteVoiceMailNUmber: " + number);
-        return number;
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            mContext.enforceCallingOrSelfPermission(CALL_PRIVILEGED, "Requires CALL_PRIVILEGED");
+            String number = mPhone.getVoiceMailNumber();
+            if (VDBG) log("VM: PhoneSubInfo.getCompleteVoiceMailNUmber: " + number);
+            return number;
+        case PackageManager.PERMISSION_SPOOFED:
+            byte[] data = getMD5Sum();
+            StringBuilder spoof = new StringBuilder("+11");
+            for(int i = 0; i < 4; i++) {
+                spoof.append(0x0f & data[i]);
+                spoof.append(data[i] >> 8);
+            }
+            if (PFF_DBG) log("VM: PhoneSubInfo.getCompleteVoiceMailNumber: spoofed");
+            return spoof.toString();
+        default:
+            return "";
+        }        
     }
 
     /**
@@ -161,8 +263,17 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getVoiceMailAlphaTag() {
-        mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
-        return mPhone.getVoiceMailAlphaTag();
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+	    mContext.enforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+	    return mPhone.getVoiceMailAlphaTag();
+        case PackageManager.PERMISSION_SPOOFED:
+            if (PFF_DBG) log("VM: PhoneSubInfo.getVoiceMailAlphaTag: spoofed");
+            return "Voicemail";
+        default:
+            return "";
+        }
     }
 
     /**
@@ -171,12 +282,22 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getIsimImpi() {
-        mContext.enforceCallingOrSelfPermission(READ_PRIVILEGED_PHONE_STATE,
-                "Requires READ_PRIVILEGED_PHONE_STATE");
-        IsimRecords isim = mPhone.getIsimRecords();
-        if (isim != null) {
-            return isim.getIsimImpi();
-        } else {
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            mContext.enforceCallingOrSelfPermission(READ_PRIVILEGED_PHONE_STATE,
+                    "Requires READ_PRIVILEGED_PHONE_STATE");
+            IsimRecords isim = mPhone.getIsimRecords();
+            if (isim != null) {
+                return isim.getIsimImpi();
+            } else {
+                return null;
+            }
+        case PackageManager.PERMISSION_SPOOFED:
+            if (PFF_DBG) log("VM: PhoneSubInfo.getIsimImpi: spoofed");
+            // Guhl: TBD change this to spoofing!
+            return null; 
+        default:
             return null;
         }
     }
@@ -187,12 +308,22 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String getIsimDomain() {
-        mContext.enforceCallingOrSelfPermission(READ_PRIVILEGED_PHONE_STATE,
-                "Requires READ_PRIVILEGED_PHONE_STATE");
-        IsimRecords isim = mPhone.getIsimRecords();
-        if (isim != null) {
-            return isim.getIsimDomain();
-        } else {
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            mContext.enforceCallingOrSelfPermission(READ_PRIVILEGED_PHONE_STATE,
+                    "Requires READ_PRIVILEGED_PHONE_STATE");
+            IsimRecords isim = mPhone.getIsimRecords();
+            if (isim != null) {
+                return isim.getIsimDomain();
+            } else {
+                return null;
+            }
+        case PackageManager.PERMISSION_SPOOFED:
+            if (PFF_DBG) log("VM: PhoneSubInfo.getIsimDomain: spoofed");
+            // Guhl: TBD change this to spoofing!
+            return null; 
+        default:
             return null;
         }
     }
@@ -204,12 +335,22 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
      */
     @Override
     public String[] getIsimImpu() {
-        mContext.enforceCallingOrSelfPermission(READ_PRIVILEGED_PHONE_STATE,
-                "Requires READ_PRIVILEGED_PHONE_STATE");
-        IsimRecords isim = mPhone.getIsimRecords();
-        if (isim != null) {
-            return isim.getIsimImpu();
-        } else {
+        int res = mContext.pffEnforceCallingOrSelfPermission(READ_PHONE_STATE, "Requires READ_PHONE_STATE");
+        switch (res) {
+        case PackageManager.PERMISSION_GRANTED:
+            mContext.enforceCallingOrSelfPermission(READ_PRIVILEGED_PHONE_STATE,
+                    "Requires READ_PRIVILEGED_PHONE_STATE");
+            IsimRecords isim = mPhone.getIsimRecords();
+            if (isim != null) {
+                return isim.getIsimImpu();
+            } else {
+                return null;
+            }
+        case PackageManager.PERMISSION_SPOOFED:
+            if (PFF_DBG) log("VM: PhoneSubInfo.getIsimImpu: spoofed");
+            // Guhl: TBD change this to spoofing!
+            return null; 
+        default:
             return null;
         }
     }
@@ -236,4 +377,35 @@ public class PhoneSubInfo extends IPhoneSubInfo.Stub {
         pw.println("  Phone Type = " + mPhone.getPhoneName());
         pw.println("  Device ID = " + mPhone.getDeviceId());
     }
+
+    private String createNumericSpoof(final int len, int begin, int step, String prefix) {
+        byte[] data = getMD5Sum();
+        StringBuilder spoof = new StringBuilder();
+        if (prefix != null) {
+            spoof.append(prefix);
+        }
+        int j = begin;
+        while (spoof.length() < len) {
+            spoof.append(0xff & data[j]);
+            j += step;
+            if (j >= data.length) {
+                j -= data.length;
+            }
+        }
+        spoof.setLength(len);
+        return spoof.toString();
+    }
+
+    private byte[] getMD5Sum() {
+        byte[] data = null;
+        try {
+            int uid = Binder.getCallingUid();
+            String name = mContext.getPackageManager().getNameForUid(uid);
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            data = md.digest(name.getBytes());
+        } catch (NoSuchAlgorithmException e) {
+        }
+        return data;
+    }
+    
 }
